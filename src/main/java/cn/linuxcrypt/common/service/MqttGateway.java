@@ -7,10 +7,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * 定义接口，用于发送消息，实现类有spring代理
+ * @author t420
  */
 @Component
 @MessagingGateway(defaultRequestChannel = "mqttOutboundChannel")
-public interface IMqttSendService {
+public interface MqttGateway  {
 
     /**
      * 发送MQTT消息
