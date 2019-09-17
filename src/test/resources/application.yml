@@ -1,0 +1,6 @@
+common:
+  mqtt:
+    hostUrls:
+      - tcp://172.16.11.199:1883
+    clientId: jj
+
