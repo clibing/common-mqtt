@@ -32,7 +32,7 @@ import java.util.Optional;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(MqttProperties.class)
-@IntegrationComponentScan
+@IntegrationComponentScan({"cn.linuxcrypt.common.config", "cn.linuxcrypt.common.service"})
 public class MqttReceiveConfig {
 
     @Autowired
