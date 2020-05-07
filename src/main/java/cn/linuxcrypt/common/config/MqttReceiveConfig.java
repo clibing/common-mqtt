@@ -33,10 +33,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.InputStream;
+import java.io.*;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.Security;
@@ -185,8 +182,8 @@ public class MqttReceiveConfig {
         X509Certificate caCert = null;
 
 //        FileInputStream fis = new FileInputStream(caCrtFile);
-        InputStream resourceAsStream = MqttReceiveConfig.class.getResourceAsStream(caCrtFile.replace("classpath:", ""));
-        BufferedInputStream bis = new BufferedInputStream(resourceAsStream);
+        InputStream rootCaStream = MqttReceiveConfig.class.getResourceAsStream(caCrtFile);
+        BufferedInputStream bis = new BufferedInputStream(rootCaStream);
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
         while (bis.available() > 0) {
@@ -195,7 +192,7 @@ public class MqttReceiveConfig {
         }
 
         // load client certificate
-        bis = new BufferedInputStream(new FileInputStream(crtFile));
+        bis = new BufferedInputStream(MqttReceiveConfig.class.getResourceAsStream(crtFile));
         X509Certificate cert = null;
         while (bis.available() > 0) {
             cert = (X509Certificate) cf.generateCertificate(bis);
@@ -203,7 +200,8 @@ public class MqttReceiveConfig {
         }
 
         // load client private key
-        PEMParser pemParser = new PEMParser(new FileReader(keyFile));
+        InputStream keyStream = MqttReceiveConfig.class.getResourceAsStream(keyFile);
+        PEMParser pemParser = new PEMParser(new InputStreamReader(keyStream));
         Object object = pemParser.readObject();
         PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
                 .build(password.toCharArray());

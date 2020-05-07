@@ -1,10 +1,11 @@
 common:
   mqtt:
     hostUrls:
-      - tcp://172.16.11.199:1883
-    clientId: jj
+#      - tcp://172.16.11.199:1883
+      - ssl://clibing.com:8883
+    clientId: fish-tank-web
     ssl: true
-    root-ca: classpath:/root-cacert.pem
-    client-ca: classpath:/client-cert.pem
-    client-key: classpath:/client.key
+    root-ca: /root-cacert.pem
+    client-ca: /client-cert.pem
+    client-key: /client.key
 

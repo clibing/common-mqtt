@@ -79,20 +79,22 @@ public class MqttProperties {
     /**
      * 是否开启ssl
      */
-    private Boolean ssl;
+    private Boolean ssl = false;
 
     /**
      * 根证书
+     * classpath:
      */
-    private String rootCa = "classpath:/root-ca.pem";
+    private String rootCa = "/root-ca.pem";
 
     /**
      * 客户端pem
+     * classpath:
      */
-    private String clientCa = "classpath:/client.csr";
+    private String clientCa = "/client.csr";
 
     /**
      * 客户端key
      */
-    private String clientKey = "classpath:/client.key";
+    private String clientKey = "/client.key";
 }
