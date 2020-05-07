@@ -5,6 +5,13 @@ import cn.linuxcrypt.common.service.IMessageHandler;
 import cn.linuxcrypt.common.util.JsonUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMDecryptorProvider;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -22,6 +29,19 @@ import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
 import org.springframework.messaging.MessageChannel;
 
 import javax.annotation.Resource;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.InputStream;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.Security;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Optional;
 
 /**
@@ -42,7 +62,7 @@ public class MqttReceiveConfig {
     private IMessageHandler messageHandler;
 
     @Bean
-    public MqttConnectOptions getMqttConnectOptions() {
+    public MqttConnectOptions getMqttConnectOptions(){
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
         // 设置是否清空session,这里如果设置为false表示服务器会保留客户端的连接记录，
         // 这里设置为true表示每次连接到服务器都以新的身份连接
@@ -56,10 +76,23 @@ public class MqttReceiveConfig {
             mqttConnectOptions.setPassword(Optional.ofNullable(mqttProperties.getPassword()).orElse("").toCharArray());
         }
         mqttConnectOptions.setServerURIs(Optional.ofNullable(mqttProperties.getHostUrls()).get());
+
         // 设置会话心跳时间
         // 例如 值为20时， 单位为秒 服务器会每隔1.5*20秒的时间向客户端发送个消息判断客户端是否在线，
         // 但这个方法并没有重连的机制
         mqttConnectOptions.setKeepAliveInterval(mqttProperties.getKeepAliveIntervalSecond());
+
+        // 是否使用ssl
+        if(Boolean.TRUE.equals(mqttProperties.getSsl())){
+            SSLSocketFactory socketFactory = null;
+            try {
+                socketFactory = getSocketFactory(mqttProperties.getRootCa(),
+                        mqttProperties.getClientCa(), mqttProperties.getClientKey(), "");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            mqttConnectOptions.setSocketFactory(socketFactory);
+        }
         return mqttConnectOptions;
     }
 
@@ -143,7 +176,74 @@ public class MqttReceiveConfig {
         return messageHandler;
     }
 
+    private static SSLSocketFactory getSocketFactory(final String caCrtFile,
+                                                     final String crtFile, final String keyFile, final String password)
+            throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
 
+        // load CA certificate
+        X509Certificate caCert = null;
+
+//        FileInputStream fis = new FileInputStream(caCrtFile);
+        InputStream resourceAsStream = MqttReceiveConfig.class.getResourceAsStream(caCrtFile.replace("classpath:", ""));
+        BufferedInputStream bis = new BufferedInputStream(resourceAsStream);
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+        while (bis.available() > 0) {
+            caCert = (X509Certificate) cf.generateCertificate(bis);
+            // System.out.println(caCert.toString());
+        }
+
+        // load client certificate
+        bis = new BufferedInputStream(new FileInputStream(crtFile));
+        X509Certificate cert = null;
+        while (bis.available() > 0) {
+            cert = (X509Certificate) cf.generateCertificate(bis);
+            // System.out.println(caCert.toString());
+        }
+
+        // load client private key
+        PEMParser pemParser = new PEMParser(new FileReader(keyFile));
+        Object object = pemParser.readObject();
+        PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
+                .build(password.toCharArray());
+        JcaPEMKeyConverter converter = new JcaPEMKeyConverter()
+                .setProvider("BC");
+        KeyPair key;
+        if (object instanceof PEMEncryptedKeyPair) {
+            System.out.println("Encrypted key - we will use provided password");
+            key = converter.getKeyPair(((PEMEncryptedKeyPair) object)
+                    .decryptKeyPair(decProv));
+        } else {
+            System.out.println("Unencrypted key - no password needed");
+            key = converter.getKeyPair((PEMKeyPair) object);
+        }
+        pemParser.close();
+
+        // CA certificate is used to authenticate server
+        KeyStore caKs = KeyStore.getInstance(KeyStore.getDefaultType());
+        caKs.load(null, null);
+        caKs.setCertificateEntry("ca-certificate", caCert);
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
+        tmf.init(caKs);
+
+        // client key and certificates are sent to server so it can authenticate
+        // us
+        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        ks.load(null, null);
+        ks.setCertificateEntry("certificate", cert);
+        ks.setKeyEntry("private-key", key.getPrivate(), password.toCharArray(),
+                new java.security.cert.Certificate[] { cert });
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory
+                .getDefaultAlgorithm());
+        kmf.init(ks, password.toCharArray());
+
+        // finally, create SSL socket factory
+        SSLContext context = SSLContext.getInstance("TLSv1.2");
+        context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+        return context.getSocketFactory();
+    }
 //    //通过通道获取数据
 //    @Bean
 //    @ServiceActivator(inputChannel = "mqttInputChannel")

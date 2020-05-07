@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "common.mqtt")
 public class MqttProperties {
-
     /**
      * 接入账号
      */
@@ -76,4 +75,24 @@ public class MqttProperties {
      * 是否异步发送
      */
     private Boolean sendAsync = true;
+
+    /**
+     * 是否开启ssl
+     */
+    private Boolean ssl;
+
+    /**
+     * 根证书
+     */
+    private String rootCa = "classpath:/root-ca.pem";
+
+    /**
+     * 客户端pem
+     */
+    private String clientCa = "classpath:/client.csr";
+
+    /**
+     * 客户端key
+     */
+    private String clientKey = "classpath:/client.key";
 }

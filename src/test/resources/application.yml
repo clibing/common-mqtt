@@ -3,4 +3,8 @@ common:
     hostUrls:
       - tcp://172.16.11.199:1883
     clientId: jj
+    ssl: true
+    root-ca: classpath:/root-cacert.pem
+    client-ca: classpath:/client-cert.pem
+    client-key: classpath:/client.key
 
