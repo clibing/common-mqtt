@@ -6,13 +6,13 @@
 
     <groupId>cn.linuxcrypt</groupId>
     <artifactId>common-mqtt</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <spring-boot.version>2.2.6.RELEASE</spring-boot.version>
-        <common-utils.version>1.0.17</common-utils.version>
+        <common-utils.version>1.0.19</common-utils.version>
         <paho.mqttv3.version>1.2.4</paho.mqttv3.version>
     </properties>
 
