@@ -13,6 +13,21 @@ common:
     ...
 ````
 
+# 使用证书
+
+````yaml
+common:
+  mqtt:
+    hostUrls:
+      - ssl://clibing.com:8883
+    clientId: ${spring.application.name}${random.int}
+    ssl: true
+    root-ca: /root-cacert.pem
+    client-ca: /client-cert.pem
+    client-key: /client.key
+
+````
+
 * 实现`cn.linuxcrypt.common.service.IMessageHandler`中的doHandler方法，用于处理接收到的消息
 
 对消息的验证是否合法性。签名验证等操作
